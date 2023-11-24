@@ -1,3 +1,104 @@
+-- Drop stored procedure PopolaAbbonamento
+DROP PROCEDURE IF EXISTS PopolaAbbonamento;
+
+-- Drop stored procedure PopolaRestrizioneAbbonamento
+DROP PROCEDURE IF EXISTS PopolaRestrizioneAbbonamento;
+
+-- Drop stored procedure PopolaArtista
+DROP PROCEDURE IF EXISTS PopolaArtista;
+
+-- Drop stored procedure PopolaAudio
+DROP PROCEDURE IF EXISTS PopolaAudio;
+
+-- Drop stored procedure PopolaCartaDiCredito
+DROP PROCEDURE IF EXISTS PopolaCartaDiCredito;
+
+-- Drop stored procedure PopolaConnessione
+DROP PROCEDURE IF EXISTS PopolaConnessione;
+
+-- Drop stored procedure PopolaCritico
+DROP PROCEDURE IF EXISTS PopolaCritico;
+
+-- Drop stored procedure PopolaEstensioneAudio
+DROP PROCEDURE IF EXISTS PopolaEstensioneAudio;
+
+-- Drop stored procedure PopolaEstensioneVideo
+DROP PROCEDURE IF EXISTS PopolaEstensioneVideo;
+
+-- Drop stored procedure PopolaFattura
+DROP PROCEDURE IF EXISTS PopolaFattura;
+
+-- Drop stored procedure PopolaFile
+DROP PROCEDURE IF EXISTS PopolaFile;
+
+-- Drop stored procedure PopolaFormatoAudio
+DROP PROCEDURE IF EXISTS PopolaFormatoAudio;
+
+-- Drop stored procedure PopolaFormatoVideo
+DROP PROCEDURE IF EXISTS PopolaFormatoVideo;
+
+-- Drop stored procedure PopolaGenere
+DROP PROCEDURE IF EXISTS PopolaGenere;
+
+-- Drop stored procedure PopolaIntestazione
+DROP PROCEDURE IF EXISTS PopolaIntestazione;
+
+-- Drop stored procedure PopolaLingua
+DROP PROCEDURE IF EXISTS PopolaLingua;
+
+-- Drop stored procedure PopolaLibreria
+DROP PROCEDURE IF EXISTS PopolaLibreria;
+
+-- Drop stored procedure PopolaPagamento
+DROP PROCEDURE IF EXISTS PopolaPagamento;
+
+-- Drop stored procedure PopolaPartecipazione
+DROP PROCEDURE IF EXISTS PopolaPartecipazione;
+
+-- Drop stored procedure PopolaPaese
+DROP PROCEDURE IF EXISTS PopolaPaese;
+
+-- Drop stored procedure PopolaPremio
+DROP PROCEDURE IF EXISTS PopolaPremio;
+
+-- Drop stored procedure PopolaPremioArtista
+DROP PROCEDURE IF EXISTS PopolaPremioArtista;
+
+-- Drop stored procedure PopolaPremioFilm
+DROP PROCEDURE IF EXISTS PopolaPremioFilm;
+
+-- Drop stored procedure PopolaRestrizionePaese
+DROP PROCEDURE IF EXISTS PopolaRestrizionePaese;
+
+-- Drop stored procedure PopolaSottotitoli
+DROP PROCEDURE IF EXISTS PopolaSottotitoli;
+
+-- Drop stored procedure PopolaUtente
+DROP PROCEDURE IF EXISTS PopolaUtente;
+
+-- Drop stored procedure PopolaValutazioneCritico
+DROP PROCEDURE IF EXISTS PopolaValutazioneCritico;
+
+-- Drop stored procedure PopolaValutazioneUtente
+DROP PROCEDURE IF EXISTS PopolaValutazioneUtente;
+
+-- Drop stored procedure PopolaVisualizzazione
+DROP PROCEDURE IF EXISTS PopolaVisualizzazione;
+
+DROP PROCEDURE IF EXISTS PopolaServer;
+
+DROP PROCEDURE IF EXISTS PopolaFilm;
+
+DROP PROCEDURE IF EXISTS PopolaAppartenenza;
+
+DROP PROCEDURE IF EXISTS PopolaDirezione;
+
+DROP PROCEDURE IF EXISTS PopolaSottotitolo;
+
+DROP PROCEDURE IF EXISTS PopolaDoppiaggio;
+
+DROP PROCEDURE IF EXISTS PopolaMemorizzazione;
+
 DELIMITER //
 
 CREATE PROCEDURE PopolaFilm()
@@ -6,7 +107,7 @@ BEGIN
   
   WHILE i <= 100 DO
     INSERT INTO Film (Titolo, Descrizione, Genere, AnnoProduzione, Durata, Rating, NumeroVisualizzazioni, NomePaese)
-    VALUES ('Titolo' || i, 'Descrizione' || i, 'Genere' || i, 2022, 120, 8.0, 0, 'Paese' || i);
+    VALUES ('Titolo' OR i, 'Descrizione' OR i, 'Genere' OR i, 2022, 120, 8.0, 0, 'Paese' OR i);
     SET i = i + 1;
   END WHILE;
   
@@ -60,7 +161,7 @@ BEGIN
   
   WHILE i <= 36 DO
     INSERT INTO Artista (IDArtista, Nome, Cognome, Popolarità)
-    VALUES (i, 'Nome' || i, 'Cognome' || i, FLOOR(RAND() * 100));
+    VALUES (i, 'Nome' OR i, 'Cognome' OR i, FLOOR(RAND() * 100));
     SET i = i + 1;
   END WHILE;
   
@@ -76,7 +177,7 @@ BEGIN
   
   WHILE i <= 600 DO
     INSERT INTO Partecipazione (Titolo, IDArtista, Ruolo)
-    VALUES ('Titolo' || CEIL(RAND() * 100), CEIL(RAND() * 36), 'Ruolo' || i);
+    VALUES ('Titolo' OR CEIL(RAND() * 100), CEIL(RAND() * 36), 'Ruolo' OR i);
     SET i = i + 1;
   END WHILE;
   
@@ -92,7 +193,7 @@ BEGIN
   
   WHILE i <= 100 DO
     INSERT INTO Direzione (Titolo, IDArtista)
-    VALUES ('Titolo' || CEIL(RAND() * 100), CEIL(RAND() * 36));
+    VALUES ('Titolo' OR CEIL(RAND() * 100), CEIL(RAND() * 36));
     SET i = i + 1;
   END WHILE;
   
@@ -108,7 +209,7 @@ BEGIN
   
   WHILE i <= 60 DO
     INSERT INTO Premio (CodicePremio, Nome, Importanza, Anno, Regista, Film, Attore)
-    VALUES (i, 'Premio' || i, 'Alta', 2022, 'Regista' || i, 'Titolo' || CEIL(RAND() * 100), 'Attore' || i);
+    VALUES (i, 'Premio' OR i, 'Alta', 2022, 'Regista' OR i, 'Titolo' OR CEIL(RAND() * 100), 'Attore' OR i);
     SET i = i + 1;
   END WHILE;
   
@@ -163,9 +264,9 @@ BEGIN
   DECLARE regione VARCHAR(255);
   
   WHILE i <= 80 DO
-    SET regione = 'Regione' || CEIL(RAND() * 10);
+    SET regione = 'Regione' OR CEIL(RAND() * 10);
     INSERT INTO Paese (NomePaese, InizioIP, FineIP, RegioneGeografica)
-    VALUES ('Paese' || i, '192.168.' || CEIL(RAND() * 255) || '.' || CEIL(RAND() * 255), '192.168.' || CEIL(RAND() * 255) || '.' || CEIL(RAND() * 255), regione);
+    VALUES ('Paese' OR i, '192.168.' OR CEIL(RAND() * 255) OR '.' OR CEIL(RAND() * 255), '192.168.' OR CEIL(RAND() * 255) OR '.' OR CEIL(RAND() * 255), regione);
     SET i = i + 1;
   END WHILE;
   
@@ -181,7 +282,7 @@ BEGIN
   
   WHILE i <= 20 DO
     INSERT INTO Critico (IDcritico, Nome, Cognome)
-    VALUES (i, 'NomeCritico' || i, 'CognomeCritico' || i);
+    VALUES (i, 'NomeCritico' OR i, 'CognomeCritico' OR i);
     SET i = i + 1;
   END WHILE;
   
@@ -197,7 +298,7 @@ BEGIN
   
   WHILE i <= 50 DO
     INSERT INTO ValutazioneCritico (IDcritico, Titolo, Testo, Data, Punteggio)
-    VALUES (CEIL(RAND() * 20), 'Titolo' || CEIL(RAND() * 100), 'TestoCritico' || i, CURDATE(), CEIL(RAND() * 5));
+    VALUES (CEIL(RAND() * 20), 'Titolo' OR CEIL(RAND() * 100), 'TestoCritico' OR i, CURDATE(), CEIL(RAND() * 5));
     SET i = i + 1;
   END WHILE;
   
@@ -231,7 +332,7 @@ BEGIN
   
   WHILE i <= 300 DO
     INSERT INTO Sottotitolo (NomeLingua, IDfile)
-    VALUES ('Lingua' || i, CEIL(RAND() * 400));
+    VALUES ('Lingua' OR i, CEIL(RAND() * 400));
     SET i = i + 1;
   END WHILE;
   
@@ -247,7 +348,7 @@ BEGIN
   
   WHILE i <= 200 DO
     INSERT INTO Doppiaggio (NomeLingua, IDfile)
-    VALUES ('Lingua' || i, CEIL(RAND() * 400));
+    VALUES ('Lingua' OR i, CEIL(RAND() * 400));
     SET i = i + 1;
   END WHILE;
   
@@ -263,7 +364,7 @@ BEGIN
   
   WHILE i <= 20 DO
     INSERT INTO RestrizionePaese (NomePaese, IDfile)
-    VALUES ('Paese' || i, CEIL(RAND() * 400));
+    VALUES ('Paese' OR i, CEIL(RAND() * 400));
     SET i = i + 1;
   END WHILE;
   
@@ -279,7 +380,7 @@ BEGIN
   
   WHILE i <= 1000 DO
     INSERT INTO Utente (CodiceUtente, Nome, Cognome, Email, Paese, Password, IDultimaFattura, N°carta)
-    VALUES (i, 'NomeUtente' || i, 'CognomeUtente' || i, 'utente' || i || '@esempio.com', 'Paese' || CEIL(RAND() * 80), 'Password' || i, CEIL(RAND() * 2500), 'Carta' || i);
+    VALUES (i, 'NomeUtente' OR i, 'CognomeUtente' OR i, 'utente' OR i OR '@esempio.com', 'Paese' OR CEIL(RAND() * 80), 'Password' OR i, CEIL(RAND() * 2500), 'Carta' OR i);
     SET i = i + 1;
   END WHILE;
   
@@ -295,7 +396,7 @@ BEGIN
   
   WHILE i <= 3000 DO
     INSERT INTO ValutazioneUtente (CodiceUtente, Titolo, Stelle, Data, Feedback)
-    VALUES (CEIL(RAND() * 1000), 'Titolo' || CEIL(RAND() * 100), CEIL(RAND() * 5), CURDATE(), 'FeedbackUtente' || i);
+    VALUES (CEIL(RAND() * 1000), 'Titolo' OR CEIL(RAND() * 100), CEIL(RAND() * 5), CURDATE(), 'FeedbackUtente' OR i);
     SET i = i + 1;
   END WHILE;
   
@@ -311,7 +412,7 @@ BEGIN
   
   WHILE i <= 2500 DO
     INSERT INTO Fattura (CodiceFattura, DataPagamento, Importo, Tipologia, CodiceUtente)
-    VALUES (i, DATE_SUB(CURDATE(), INTERVAL CEIL(RAND() * 30) DAY), CEIL(RAND() * 100), 'Tipologia' || CEIL(RAND() * 5), CEIL(RAND() * 1000));
+    VALUES (i, DATE_SUB(CURDATE(), INTERVAL CEIL(RAND() * 30) DAY), CEIL(RAND() * 100), 'Tipologia' OR CEIL(RAND() * 5), CEIL(RAND() * 1000));
     SET i = i + 1;
   END WHILE;
   
@@ -358,7 +459,7 @@ BEGIN
   
   WHILE i <= 1000 DO
     INSERT INTO CartaDiCredito (N_carta, DataScadenza, Intestatario, CVV)
-    VALUES ('Carta' || i, DATE_ADD(CURDATE(), INTERVAL CEIL(RAND() * 5) YEAR), 'Intestatario' || i, LPAD(CEIL(RAND() * 999), 3, '0'));
+    VALUES ('Carta' OR i, DATE_ADD(CURDATE(), INTERVAL CEIL(RAND() * 5) YEAR), 'Intestatario' OR i, LPAD(CEIL(RAND() * 999), 3, '0'));
     SET i = i + 1;
   END WHILE;
   
@@ -374,7 +475,7 @@ BEGIN
   
   WHILE i <= 50 DO
     INSERT INTO RestrizioneAbbonamento (NomePaese, Tipologia)
-    VALUES ('Paese' || i, 'Tipo' || CEIL(RAND() * 5));
+    VALUES ('Paese' OR i, 'Tipo' OR CEIL(RAND() * 5));
     SET i = i + 1;
   END WHILE;
   
@@ -390,7 +491,7 @@ BEGIN
   
   WHILE i <= 1500 DO
     INSERT INTO Libreria (IDfile, Tipologia)
-    VALUES (CEIL(RAND() * 400), 'Tipo' || CEIL(RAND() * 5));
+    VALUES (CEIL(RAND() * 400), 'Tipo' OR CEIL(RAND() * 5));
     SET i = i + 1;
   END WHILE;
   
@@ -408,7 +509,7 @@ BEGIN
     INSERT INTO Connessione (IP, RisoluzioneSchermoDispositivo, TipoDispositivo, MAC, Inizio, Fine, CodiceUtente)
     VALUES (CONCAT('192.168.', CEIL(RAND() * 255), '.', CEIL(RAND() * 255)),
             CONCAT(CEIL(RAND() * 1920), 'x', CEIL(RAND() * 1080)),
-            'Tipo' || CEIL(RAND() * 5), CONCAT(UCASE(HEX(FLOOR(RAND() * 1000))),
+            'Tipo' OR CEIL(RAND() * 5), CONCAT(UCASE(HEX(FLOOR(RAND() * 1000))),
             '-', UCASE(HEX(FLOOR(RAND() * 1000))),
             '-', UCASE(HEX(FLOOR(RAND() * 1000)))), NOW() - INTERVAL CEIL(RAND() * 30) DAY,
             NOW(), CEIL(RAND() * 1000));
@@ -426,8 +527,8 @@ BEGIN
   DECLARE i INT DEFAULT 1;
   
   WHILE i <= 80 DO
-    INSERT INTO Server (IDserver, Storage_, RegioneGeografica, On_Off, DisponibilitàBanda, CapacitàMassima, LunghezzaBanda)
-    VALUES (i, CONCAT(CEIL(RAND() * 2000), ' GB'), 'Regione' || CEIL(RAND() * 5),
+    INSERT INTO Server_(IDserver, Storage_, RegioneGeografica, On_Off, DisponibilitàBanda, CapacitàMassima, LunghezzaBanda)
+    VALUES (i, CONCAT(CEIL(RAND() * 2000), ' GB'), 'Regione' OR CEIL(RAND() * 5),
             'Sì', CEIL(RAND() * 1000), CONCAT(CEIL(RAND() * 2000), ' GB'),
             CONCAT(CEIL(RAND() * 200), ' Mbps'));
     SET i = i + 1;
@@ -478,8 +579,8 @@ BEGIN
   
   WHILE i <= 400 DO
     INSERT INTO File_(IDfile, Dimensione, DataRilascio, Titolo)
-    VALUES (i, 'File' || i, CONCAT(CEIL(RAND() * 2000), ' MB'),
-            DATE_SUB(NOW(), INTERVAL CEIL(RAND() * 365) DAY), 'Titolo' || CEIL(RAND() * 100));
+    VALUES (i, 'File' OR i, CONCAT(CEIL(RAND() * 2000), ' MB'),
+            DATE_SUB(NOW(), INTERVAL CEIL(RAND() * 365) DAY), 'Titolo' OR CEIL(RAND() * 100));
     SET i = i + 1;
   END WHILE;
   
@@ -513,7 +614,7 @@ BEGIN
   
   WHILE i <= 400 DO
     INSERT INTO EstensioneAudio (CodiceAudio, IDfile)
-    VALUES ('Codec' || CEIL(RAND() * 8), CEIL(RAND() * 6000));
+    VALUES ('Codec' OR CEIL(RAND() * 8), CEIL(RAND() * 6000));
     SET i = i + 1;
   END WHILE;
   
@@ -529,7 +630,7 @@ BEGIN
   
   WHILE i <= 10 DO
     INSERT INTO FormatoVideo (CodiceVideo, FPS, Risoluzione, BitRateVideo, RapportoAspetto)
-    VALUES ('Formato' || i, FLOOR(RAND() * 30) + 10, 'Risoluzione' || i, FLOOR(RAND() * 5000) + 1000, 'Rapporto' || i);
+    VALUES ('Formato' OR i, FLOOR(RAND() * 30) + 10, 'Risoluzione' OR i, FLOOR(RAND() * 5000) + 1000, 'Rapporto' OR i);
     SET i = i + 1;
   END WHILE;
   
@@ -545,7 +646,7 @@ BEGIN
   
   WHILE i <= 400 DO
     INSERT INTO EstensioneVideo (CodiceVideo, IDfile)
-    VALUES ('Codec' || CEIL(RAND() * 10), CEIL(RAND() * 6000));
+    VALUES ('Codec' OR CEIL(RAND() * 10), CEIL(RAND() * 6000));
     SET i = i + 1;
   END WHILE;
   

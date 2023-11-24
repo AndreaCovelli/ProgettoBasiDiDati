@@ -1,3 +1,5 @@
+-- Il comando TRUNCATE permette di rimuovere tutte le tuple da una tabella
+
 TRUNCATE TABLE Genere;
 TRUNCATE TABLE Film;
 TRUNCATE TABLE Appartenenza;
@@ -15,7 +17,7 @@ TRUNCATE TABLE Lingua;
 TRUNCATE TABLE Paese;
 TRUNCATE TABLE RestrizionePaese;
 
-TRUNCATE TABLE File;
+TRUNCATE TABLE File_;
 TRUNCATE TABLE EstensioneAudio;
 TRUNCATE TABLE EstensioneVideo;
 TRUNCATE TABLE FormatoAudio;
@@ -32,5 +34,5 @@ TRUNCATE TABLE RestrizioneAbbonamento;
 TRUNCATE TABLE Libreria;
 
 TRUNCATE TABLE Visualizzazione;
-TRUNCATE TABLE Server;
+TRUNCATE TABLE Server_;
 TRUNCATE TABLE Memorizzazione;

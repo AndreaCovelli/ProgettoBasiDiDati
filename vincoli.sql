@@ -1,6 +1,7 @@
 -- Vincoli intrarelazionali di dominio
-ALTER TABLE Film
-  ADD CONSTRAINT Check_Anno CHECK (Anno >= 1900 AND Anno <= YEAR(CURRENT_DATE));
+
+/*ALTER TABLE Film
+  ADD CONSTRAINT Check_Anno CHECK (Anno >= 1900 AND Anno <= YEAR(CURRENT_DATE));*/
 
 ALTER TABLE Film
   ADD CONSTRAINT Check_Durata CHECK (Durata >= 5 AND Durata <= 360);
@@ -11,11 +12,11 @@ ALTER TABLE CartaDiCredito
 ALTER TABLE CartaDiCredito
   ADD CONSTRAINT Check_CVV CHECK (CVV >= 100 AND CVV <= 999);
 
-ALTER TABLE CartaDiCredito
+/*ALTER TABLE CartaDiCredito
   ADD CONSTRAINT Check_MeseScadenza CHECK (MeseScadenza >= 1 AND MeseScadenza <= 12);
 
 ALTER TABLE CartaDiCredito
-  ADD CONSTRAINT Check_AnnoScadenza CHECK (AnnoScadenza >= YEAR(CURRENT_DATE));
+  ADD CONSTRAINT Check_AnnoScadenza CHECK (AnnoScadenza >= YEAR(CURRENT_DATE));*/
 
 ALTER TABLE Connessione
   ADD CONSTRAINT Check_IP CHECK (IP >= '0.0.0.0' AND IP <= '255.255.255.255');
@@ -51,6 +52,7 @@ ALTER TABLE Abbonamento
   ADD CONSTRAINT Check_N_dispositivi CHECK (N_dispositivi >= 1 AND N_dispositivi <= 5);
 
 -- Vincoli intrarelazionali di n-upla
+
 ALTER TABLE Premio
   ADD CONSTRAINT Check_PremioNotNull CHECK (Attore IS NOT NULL OR Regista IS NOT NULL OR Film IS NOT NULL);
 

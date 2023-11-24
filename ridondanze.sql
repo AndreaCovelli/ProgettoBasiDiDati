@@ -2,78 +2,73 @@
 
 DELIMITER //
 
-CREATE PROCEDURE InserisciRidondanzaIDUltimaFattura(IN CodiceUtente INT)
+-- Stored procedure per il mantenimento della ridondanza
+CREATE PROCEDURE InserisciRidondanzaIDUltimaFattura()
 BEGIN
-    DECLARE TipoAbbonamento INT;
-    DECLARE IDNuovaFattura INT;
+  DECLARE idFattura INT;
+  DECLARE codiceUtente INT;
+  
+  -- Si seleziona l'IDfattura più recente per ciascun utente
+  DECLARE cur CURSOR FOR
+    SELECT IDfattura, CodiceUtente
+    FROM Fattura NATURAL JOIN Utente
+    ORDER BY CodiceUtente, DataPagamento DESC;
 
-    -- Controlla se l'utente ha il rinnovo automatico attivo
-    SELECT AbbonamentoID INTO TipoAbbonamento
-    FROM Sottoscrizione
-    WHERE UtenteID = CodiceUtente;
+  OPEN cur;
 
-    -- Esce se l'utente non ha il rinnovo automatico attivo
-    IF TipoAbbonamento IS NULL THEN
-        LEAVE InserisciRidondanzaIDUltimaFattura;
+  -- Si scorre il cursore e si aggiorna la ridondanza
+  read_loop: LOOP
+    FETCH cur INTO idFattura, codiceUtente;
+    IF idFattura IS NULL THEN
+      LEAVE read_loop;
     END IF;
-
-    -- Genera una nuova fattura
-    INSERT INTO Fattura (DataEmissione, Importo, StatoPagamento)
-    VALUES (CURDATE(), (SELECT ImportoAbbonamento FROM Abbonamento WHERE IDAbbonamento = TipoAbbonamento), 'Non Pagata');
-
-    -- Ottiene l'ID della nuova fattura
-    SELECT LAST_INSERT_ID() INTO IDNuovaFattura;
-
-    -- Associa la nuova fattura al tipo di abbonamento
-    INSERT INTO Sottoscrizione (UtenteID, AbbonamentoID, IDUltimaFattura)
-    VALUES (CodiceUtente, TipoAbbonamento, IDNuovaFattura);
-
-    -- Intesta la nuova fattura all'utente
-    INSERT INTO Intestazione (IDfattura, CodiceUtente)
-    VALUES (IDNuovaFattura, CodiceUtente);
-
-    -- Aggiorna l'IDUltimaFattura dell'utente con il valore della nuova fattura
+    
     UPDATE Utente
-    SET IDUltimaFattura = IDNuovaFattura
-    WHERE CodiceUtente = CodiceUtente;
+    SET IDultimaFattura = idFattura
+    WHERE CodiceUtente = codiceUtente;
+  END LOOP;
+
+  CLOSE cur;
+
 END//
 
 DELIMITER ;
 
--- Aggiornamento ridondanza NumeroFilm per ciascuna lingua di FilmSphere
-
 DELIMITER //
 
--- Creazione della stored procedure per l'introduzione della ridondanza NumeroFilm
+  -- Inserimento della ridondanza NumeroFilm 
+
 CREATE PROCEDURE IntroduciRidondanzaNumeroFilm()
 BEGIN
-    -- Dichiarazione delle variabili
-    DECLARE LinguaCorrente VARCHAR(255);
-    DECLARE NumeroFilm INT;
-    
-    -- Crea un cursore per ottenere tutte le lingue
-    DECLARE cur CURSOR FOR
-        SELECT DISTINCT Lingua
-        FROM Audio;
-    
-    -- Loop attraverso tutte le lingue
-    OPEN cur;
-    read_loop: LOOP
-        FETCH cur INTO LinguaCorrente;
-        
-        -- Conta il numero di film per la lingua corrente
-        SELECT COUNT(DISTINCT Film.TitoloFilm)
-        INTO NumeroFilm
-        FROM Codifica
-        WHERE Codifica.CodiceAudio IN (SELECT CodiceAudio FROM Audio WHERE Lingua = LinguaCorrente);
-        
-        -- Aggiorna il valore NumeroFilm nella tabella Lingua
-        UPDATE Lingua
-        SET Lingua.NumeroFilm = NumeroFilm
-        WHERE Lingua.Lingua = LinguaCorrente;
-        
-    END LOOP;
-    CLOSE cur;
+  -- Introduzione della ridondanza NumeroFilm
+  ALTER TABLE Abbonamento ADD COLUMN NumeroFilm INT;
+
+  -- Popolamento della ridondanza
+  UPDATE Abbonamento
+  SET NumeroFilm = (
+    SELECT COUNT(DISTINCT f.Titolo)
+    FROM Libreria l
+    JOIN File_ fi ON l.IDfile = fi.IDfile
+    JOIN Film f ON fi.Titolo = f.Titolo
+    WHERE l.Tipologia = Abbonamento.Tipologia
+  );
+
+END//
+
+-- Aggiornamento della ridondanza Numerofilm
+
+CREATE PROCEDURE AggiornaRidondanzaNumeroFilm()
+BEGIN
+  -- Aggiornamento della ridondanza NumeroFilm
+  UPDATE Abbonamento
+  SET NumeroFilm = (
+    SELECT COUNT(DISTINCT f.Titolo)
+    FROM Libreria l
+    JOIN File_ fi ON l.IDfile = fi.IDfile
+    JOIN Film f ON fi.Titolo = f.Titolo
+    WHERE l.Tipologia = Abbonamento.Tipologia
+  );
+
 END//
 
 DELIMITER ;
@@ -132,7 +127,7 @@ ON SCHEDULE
 EVERY 1 DAY
 STARTS TIMESTAMP(CURRENT_DATE + INTERVAL 1 DAY, '00:00:00')
 COMMENT 'Aggiornamento ridondanza NumeroFatture'
-DO CALL InserisciRidondanzaIDUltimaFattura(123456789);
+DO CALL InserisciRidondanzaIDUltimaFattura();
 
 CREATE EVENT RidNumFilmPerLingua
 ON SCHEDULE

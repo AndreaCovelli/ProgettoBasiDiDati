@@ -1,85 +1,72 @@
--- Rating assoluto
+DROP PROCEDURE IF EXISTS ClassificaVisualizzazioniPerAbbonamento;
+DROP PROCEDURE IF EXISTS CalcolaFilmPiùRichiesti;
+
+-- Analytic function n°1: Classifica
 
 DELIMITER //
 
-CREATE PROCEDURE CalcolaRatingAssoluto()
+CREATE PROCEDURE ClassificaVisualizzazioniPerAbbonamento(
+    IN InputPaese VARCHAR(255),
+    IN InputTipologiaAbbonamento VARCHAR(255)
+)
 BEGIN
-    DECLARE mu_rating_utenti DECIMAL(4, 2);
-    DECLARE mu_rating_critici DECIMAL(4, 2);
-    DECLARE delta_regista DECIMAL(4, 2);
-    DECLARE delta_attore DECIMAL(4, 2);
-    DECLARE lambda_premi_film DECIMAL(4, 2);
-    DECLARE lambda_premi_attori_film DECIMAL(4, 2);
-    DECLARE gamma DECIMAL(4, 2);
-    DECLARE Rating_assoluto DECIMAL(4, 2);
+    -- Step 1
+    CREATE TEMPORARY TABLE TempVisualizzazioniFile AS
+    SELECT IDfile, IDvisualizzazione
+    FROM VisualizzazioneFile;
+
+    -- Step 2
+    CREATE TEMPORARY TABLE TempFileCodifica AS
+    SELECT tf.IDfile, c.Titolo
+    FROM TempVisualizzazioniFile tf
+    JOIN Codifica c ON tf.IDfile = c.IDfile;
+
+    -- Step 3
+    CREATE TEMPORARY TABLE TempVisualizzazioniUtente AS
+    SELECT tf.IDfile, v.IDvisualizzazione, a.CodiceUtente
+    FROM TempVisualizzazioniFile tf
+    JOIN Visualizzazione v ON tf.IDvisualizzazione = v.IDvisualizzazione
+    JOIN Fruizione f ON v.IDvisualizzazione = f.IDvisualizzazione
+    JOIN Accesso a ON f.CodiceConnessione = a.CodiceConnessione;
+
+    -- Step 4
+    CREATE TEMPORARY TABLE TempVisualizzazioniAbbonamento AS
+    SELECT tu.IDfile, tu.IDvisualizzazione, tu.CodiceUtente, u.Paese, u.IDultimaFattura
+    FROM TempVisualizzazioniUtente tu
+    JOIN Utente u ON tu.CodiceUtente = u.CodiceUtente;
+
+    -- Step 5
+    CREATE TEMPORARY TABLE TempVisualizzazioniFiltrate AS
+    SELECT tva.IDfile, tva.IDvisualizzazione, tva.Paese, s.Tipologia
+    FROM TempVisualizzazioniAbbonamento tva
+    JOIN Sottoscrizione s ON tva.IDultimaFattura = s.IDfattura
+    WHERE tva.Paese = InputPaese AND s.Tipologia = InputTipologiaAbbonamento;
+
+    -- Step 6
+    CREATE TEMPORARY TABLE TempConteggioPerFilm AS
+    SELECT IDfile, COUNT(*) AS NumeroVisualizzazioni
+    FROM TempVisualizzazioniFiltrate
+    GROUP BY IDfile;
+
+    -- Step 7
+    SELECT tfc.Titolo, tcf.NumeroVisualizzazioni
+    FROM TempFileCodifica tfc
+    JOIN TempConteggioPerFilm tcf ON tfc.IDfile = tcf.IDfile
+    ORDER BY tcf.NumeroVisualizzazioni DESC;
+
+    -- Cleanup: drop temporary tables
+    DROP TEMPORARY TABLE IF EXISTS TempVisualizzazioniFile;
+    DROP TEMPORARY TABLE IF EXISTS TempFileCodifica;
+    DROP TEMPORARY TABLE IF EXISTS TempVisualizzazioniUtente;
+    DROP TEMPORARY TABLE IF EXISTS TempVisualizzazioniAbbonamento;
+    DROP TEMPORARY TABLE IF EXISTS TempVisualizzazioniFiltrate;
+    DROP TEMPORARY TABLE IF EXISTS TempConteggioPerFilm;
     
-    -- Calcolo di mu_rating_utenti
-    SET mu_rating_utenti = (SELECT AVG(Rating) * 0.4 FROM Film);
-    
-    -- Calcolo di mu_rating_critici
-    SET mu_rating_critici = (SELECT AVG(Rating) * 0.3 FROM Film);
-    
-    -- Calcolo di delta_regista
-    SET delta_regista = CASE
-        WHEN NumeroPremiRegista BETWEEN 0 AND 19 THEN 1 * 0.2
-        WHEN NumeroPremiRegista BETWEEN 20 AND 39 THEN 2 * 0.2
-        WHEN NumeroPremiRegista BETWEEN 40 AND 59 THEN 3 * 0.2
-        WHEN NumeroPremiRegista BETWEEN 60 AND 79 THEN 4 * 0.2
-        WHEN NumeroPremiRegista >= 80 THEN 5 * 0.2
-        ELSE 0
-    END;
-    
-    -- Calcolo di delta_attore
-    SET delta_attore = CASE
-        WHEN NumeroPremiAttore BETWEEN 0 AND 9 THEN 1 * 0.3
-        WHEN NumeroPremiAttore BETWEEN 10 AND 19 THEN 2 * 0.3
-        WHEN NumeroPremiAttore BETWEEN 20 AND 29 THEN 3 * 0.3
-        WHEN NumeroPremiAttore BETWEEN 30 AND 39 THEN 4 * 0.3
-        WHEN NumeroPremiAttore >= 40 THEN 5 * 0.3
-        ELSE 0
-    END;
-    
-    -- Calcolo di lambda_premi_film
-    SET lambda_premi_film = CASE
-        WHEN NumeroPremiFilm BETWEEN 0 AND 4 THEN 1 * 0.3
-        WHEN NumeroPremiFilm BETWEEN 5 AND 9 THEN 2 * 0.3
-        WHEN NumeroPremiFilm BETWEEN 10 AND 14 THEN 3 * 0.3
-        WHEN NumeroPremiFilm BETWEEN 15 AND 19 THEN 4 * 0.3
-        WHEN NumeroPremiFilm >= 20 THEN 5 * 0.3
-        ELSE 0
-    END;
-    
-    -- Calcolo di lambda_premi_attori_film
-    SET lambda_premi_attori_film = CASE
-        WHEN NumeroPremiAttoriFilm BETWEEN 0 AND 4 THEN 1 * 0.2
-        WHEN NumeroPremiAttoriFilm BETWEEN 5 AND 9 THEN 2 * 0.2
-        WHEN NumeroPremiAttoriFilm BETWEEN 10 AND 14 THEN 3 * 0.2
-        WHEN NumeroPremiAttoriFilm BETWEEN 15 AND 19 THEN 4 * 0.2
-        WHEN NumeroPremiAttoriFilm >= 20 THEN 5 * 0.2
-        ELSE 0
-    END;
-    
-    -- Calcolo di gamma
-    SET gamma = CASE
-        WHEN NumeroVisualizzazioni BETWEEN 0 AND 999999 THEN 1 * 0.3
-        WHEN NumeroVisualizzazioni BETWEEN 1000000 AND 2999999 THEN 2 * 0.3
-        WHEN NumeroVisualizzazioni BETWEEN 3000000 AND 5999999 THEN 3 * 0.3
-        WHEN NumeroVisualizzazioni BETWEEN 6000000 AND 9999999 THEN 4 * 0.3
-        WHEN NumeroVisualizzazioni >= 10000000 THEN 5 * 0.3
-        ELSE 0
-    END;
-    
-    -- Calcolo del Rating assoluto
-    SET Rating_assoluto = mu_rating_utenti + mu_rating_critici + delta_regista + delta_attore + lambda_premi_film + lambda_premi_attori_film + gamma;
-    
-    -- Aggiorna il Rating assoluto per ciascun film
-    UPDATE Film
-    SET RatingAssoluto = Rating_assoluto;
 END//
 
 DELIMITER ;
 
--- Custom analytic
+-- Analytic function n°2: Custom analytic
 
 DELIMITER //
 

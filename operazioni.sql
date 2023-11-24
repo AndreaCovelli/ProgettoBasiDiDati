@@ -1,3 +1,37 @@
+-- Drop stored procedure 1 RegistraUtente
+DROP PROCEDURE IF EXISTS RegistraUtente;
+
+-- Drop stored procedure 2 Pagamento fattura
+DROP PROCEDURE IF EXISTS PagamentoFattura;
+
+-- Drop stored procedure 3 InserisciFileInFilmSphere
+DROP PROCEDURE IF EXISTS InserisciFileInFilmSphere;
+
+-- Drop stored procedure 4 Inserimento di una valutazione utente
+DROP PROCEDURE IF EXISTS InserisciValutazioneUtente;
+
+-- Drop stored procedure 5 Numero di fatture in un paese
+DROP PROCEDURE IF EXISTS CalcolaNumeroFatturePaese;
+
+-- Drop stored procedure 6 Stampa stato Server
+DROP PROCEDURE IF EXISTS StampaStatoServer;
+
+-- Drop stored procedure 7 Elencare n° film disponibili in una lingua
+DROP PROCEDURE IF EXISTS NumeroFilmDisponibiliPerAbbonamento;
+
+-- Drop stored procedure 8 Numero di visualizzazioni di un film
+DROP PROCEDURE IF EXISTS CalcolaNumeroVisualizzazioniFilm;
+
+-- Drop stored procedure funzionalità n°1
+DROP PROCEDURE IF EXISTS CalcolaRatingAssoluto;
+
+-- Drop stored procedure funzionalità n°2
+DROP PROCEDURE IF EXISTS ScegliServer;
+
+-- Drop stored procedure funzionalità n°3
+DROP PROCEDURE IF EXISTS CalcolaProbabilitàCaching;
+
+
 -- Operazione n°1: Registrazione di un utente
 
 DELIMITER //
@@ -6,7 +40,7 @@ CREATE PROCEDURE RegistraUtente(
     IN Nome VARCHAR(255),
     IN Cognome VARCHAR(255),
     IN Email VARCHAR(255),
-    IN Password VARCHAR(255),
+    IN Password_ VARCHAR(255),
     IN TipologiaAbbonamento VARCHAR(255),
     IN NumeroCarta VARCHAR(16),
     IN ScadenzaCarta DATE,
@@ -62,52 +96,58 @@ END//
 
 DELIMITER ;
 
--- Operazione n°2: Rinnovo mensile automatico dell’abbonamento
+-- Operazione n°2: PagamentoFattura
 
 DELIMITER //
 
-CREATE PROCEDURE RinnovoMensileAbbonamento(IN CodiceUtente INT)
+CREATE PROCEDURE PagamentoFattura(IN p_CodiceUtente INT)
 BEGIN
-    DECLARE DataOdierna DATE;
-    DECLARE UltimaFattura INT;
-    DECLARE CartaCredito INT;
-    DECLARE Pagamento INT;
+  DECLARE idFattura INT;
+  DECLARE idCartaCredito INT;
+  DECLARE tipoAbbonamento VARCHAR(255);
 
-    -- Trova la data odierna
-    SET DataOdierna = CURDATE();
+  -- Si seleziona l'IDfattura più recente per l'utente specificato
+  SELECT IDfattura INTO idFattura
+  FROM Utente
+  WHERE CodiceUtente = p_CodiceUtente;
 
-    -- Trova l'ultima fattura non pagata per l'utente
-    SELECT MAX(IDfattura) INTO UltimaFattura
-    FROM Utente
-    WHERE Utente.CodiceUtente = CodiceUtente;
+  -- Si seleziona la carta di credito associata all'utente
+  SELECT IDcarta INTO idCartaCredito
+  FROM FormaPagamento
+  WHERE CodiceUtente = p_CodiceUtente
+  LIMIT 1;
 
-    -- Esci se non ci sono fatture non pagate
-    IF UltimaFattura IS NULL THEN
-        LEAVE RinnovoMensileAbbonamento;
-    END IF;
+  -- Si effettua il pagamento della fattura
+  INSERT INTO Pagamento (IDfattura, DataPagamento, N°carta)
+  VALUES (idFattura, NOW(), idCartaCredito);
 
-    -- Cerca una carta di credito dell'utente
-    SELECT IDcarta INTO CartaCredito
-    FROM CartaDiCredito
-    WHERE CodiceUtente = CodiceUtente;
+  -- Si associa la carta di credito al nuovo pagamento
+  INSERT INTO DettagliPagamento (IDfattura, IDcarta)
+  VALUES (idFattura, idCartaCredito);
 
-    -- Esci se non ci sono carte di credito
-    IF CartaCredito IS NULL THEN
-        LEAVE RinnovoMensileAbbonamento;
-    END IF;
+  -- Si associa il pagamento alla relativa fattura
+  INSERT INTO Transazione (IDfattura, IDpagamento)
+  VALUES (idFattura, LAST_INSERT_ID());
 
-    -- Crea un nuovo pagamento
-    INSERT INTO Pagamento (DataPagamento, Importo, IDcarta, CodiceUtente, IDfattura)
-    VALUES (DataOdierna, (SELECT Importo FROM Fattura WHERE IDfattura = UltimaFattura), CartaCredito, CodiceUtente, UltimaFattura);
+  -- Si cerca la tipologia di abbonamento della fattura appena pagata
+  SELECT Tipologia INTO tipoAbbonamento
+  FROM Sottoscrizione
+  WHERE IDfattura = idFattura;
 
-    -- Aggiorna lo stato di pagamento della fattura
-    UPDATE Fattura
-    SET StatoPagamento = 'Pagata'
-    WHERE IDfattura = UltimaFattura;
+  -- Si emette una nuova fattura intestata all'utente
+  INSERT INTO Fattura (IDfattura, DataPagamento, Importo, Tipologia, CodiceUtente)
+  VALUES (NULL, NOW(), FLOOR(RAND() * 100), tipoAbbonamento, p_CodiceUtente);
 
-    -- Aggiungi il pagamento alla transazione
-    INSERT INTO Transazione (IDpagamento, IDfattura)
-    VALUES (LAST_INSERT_ID(), UltimaFattura);
+  -- Si associa la nuova fattura alla stessa tipologia di abbonamento della precedente
+  SET @nuovaFatturaID = LAST_INSERT_ID();
+  INSERT INTO Sottoscrizione (IDfattura, Tipologia)
+  VALUES (@nuovaFatturaID, tipoAbbonamento);
+
+  -- Si aggiorna la ridondanza IDultimaFattura nell'entità Utente
+  UPDATE Utente
+  SET IDultimaFattura = @nuovaFatturaID
+  WHERE CodiceUtente = p_CodiceUtente;
+
 END//
 
 DELIMITER ;
@@ -127,7 +167,7 @@ CREATE PROCEDURE InserisciFileInFilmSphere(
     IN CodiceVideo INT,
     IN RegioneGeografica VARCHAR(255)
 )
-BEGIN
+label1: BEGIN
     DECLARE LinguaID INT;
     DECLARE FormatoAudioID INT;
     DECLARE FormatoVideoID INT;
@@ -160,16 +200,16 @@ BEGIN
         SET FormatoVideoID = LAST_INSERT_ID();
     END IF;
 
-    -- Trova un server disponibile nella regione geografica specificata
+    -- Trova un Server_ disponibile nella regione geografica specificata
     SELECT IDServer INTO ServerID
-    FROM Server
+    FROM Server_
     WHERE RegioneGeografica = RegioneGeografica
     AND (SELECT COUNT(*) FROM Memorizzazione WHERE ServerID = IDServer) < 5000
     LIMIT 1;
 
-    -- Se nessun server disponibile nella regione, esci
+    -- Se nessun Server_ disponibile nella regione, esci
     IF ServerID IS NULL THEN
-        LEAVE InserisciFileInFilmSphere;
+        LEAVE label1;
     END IF;
 
     -- Inserisci i dati del file nella base di dati
@@ -191,7 +231,7 @@ BEGIN
      -- Associa il file ai suoi sottotitoli
     INSERT INTO Sottotitolo (FileID, Lingua) VALUES (IDfile, LinguaSottotitolo);
 
-    -- Associa il file al server nella regione geografica specificata
+    -- Associa il file al Server_ nella regione geografica specificata
     INSERT INTO Memorizzazione (ServerID, FileID) VALUES (ServerID, IDfile);
     
 END//
@@ -206,10 +246,10 @@ CREATE PROCEDURE InserisciValutazioneUtente(
     IN CodiceUtente INT,
     IN Titolo VARCHAR(255),
     IN Stelle INT,
-    IN Data DATE,
+    IN Data_ DATE,
     IN Feedback TEXT
 )
-BEGIN
+label2: BEGIN
     -- Controlla se l'utente esiste nella base di dati
     DECLARE UtenteID INT;
 	DECLARE FilmID INT;
@@ -217,7 +257,7 @@ BEGIN
 
     IF UtenteID IS NULL THEN
         -- L'utente non esiste, esci
-        LEAVE InserisciValutazioneUtente;
+        LEAVE label2;
     END IF;
 
     -- Controlla se il film esiste nella base di dati
@@ -225,12 +265,12 @@ BEGIN
 
     IF FilmID IS NULL THEN
         -- Il film non esiste, esci
-        LEAVE InserisciValutazioneUtente;
+        LEAVE label2;
     END IF;
 
     -- Inserisci la valutazione dell'utente nella base di dati
-    INSERT INTO ValutazioneUtente (UtenteID, FilmID, Stelle, Data, Feedback)
-    VALUES (UtenteID, FilmID, Stelle, Data, Feedback);
+    INSERT INTO ValutazioneUtente (UtenteID, FilmID, Stelle, Data_, Feedback)
+    VALUES (UtenteID, FilmID, Stelle, Data_, Feedback);
 
 END//
 
@@ -263,7 +303,7 @@ END//
 
 DELIMITER ;
 
--- Operazione n°6: Stampa stato di un server
+-- Operazione n°6: Stampa stato di un Server_
 
 DELIMITER //
 
@@ -277,27 +317,25 @@ CREATE PROCEDURE StampaStatoServer(
     OUT ServerDisponibilitaBanda INT
 )
 BEGIN
-    -- Recupera lo stato del server specificato dal suo ID
-    SELECT RegioneGeografica, Storage, OnOff, LarghezzaBanda, CapacitaMassima, DisponibilitaBanda
+    -- Recupera lo stato del Server_ specificato dal suo ID
+    SELECT RegioneGeografica, Storage_, OnOff, LarghezzaBanda, CapacitaMassima, DisponibilitaBanda
     INTO ServerRegioneGeografica, ServerStorage, ServerOnOff, ServerLarghezzaBanda, ServerCapacitaMassima, ServerDisponibilitaBanda
-    FROM Server
+    FROM Server_
     WHERE IDServer = ServerID;
 END//
 
 DELIMITER ;
 
--- Operazione n°7: Elencare n° film disponibili in una lingua
+-- Operazione n°7: Elencare n° film disponibili in un abbonamento
 DELIMITER //
 
-CREATE PROCEDURE ElencoFilmPerLingua(
-    IN LinguaCercata VARCHAR(255),
-    OUT NumeroFilm INT
-)
+CREATE PROCEDURE NumeroFilmDisponibiliPerAbbonamento(IN TipoAbbonamento VARCHAR(255), OUT NumeroFilmDisponibili INT)
 BEGIN
-    -- Conta il numero di film disponibili nella lingua specificata
-    SELECT Lingua.NumeroFilm INTO NumeroFilm
-    FROM Lingua
-    WHERE Lingua.NomeLingua=LinguaCercata;
+  -- Utilizzo della ridondanza NumeroFilm
+  SELECT NumeroFilm INTO NumeroFilmDisponibili
+  FROM Abbonamento
+  WHERE Tipologia = TipoAbbonamento;
+
 END//
 
 DELIMITER ;
@@ -317,7 +355,88 @@ END//
 
 DELIMITER ;
 
--- Operazione n°9: Scelta del server
+-- Funzionalità n°1: Rating assoluto
+
+DELIMITER //
+
+CREATE PROCEDURE CalcolaRatingAssoluto()
+BEGIN
+    DECLARE mu_rating_utenti DECIMAL(4, 2);
+    DECLARE mu_rating_critici DECIMAL(4, 2);
+    DECLARE delta_regista DECIMAL(4, 2);
+    DECLARE delta_attore DECIMAL(4, 2);
+    DECLARE lambda_premi_film DECIMAL(4, 2);
+    DECLARE lambda_premi_attori_film DECIMAL(4, 2);
+    DECLARE gamma DECIMAL(4, 2);
+    DECLARE Rating_assoluto DECIMAL(4, 2);
+    
+    -- Calcolo di mu_rating_utenti 
+    SET mu_rating_utenti = (SELECT AVG(Rating) * 0.4 FROM Film);
+    
+    -- Calcolo di mu_rating_critici
+    SET mu_rating_critici = (SELECT AVG(Rating) * 0.3 FROM Film);
+    
+    -- Calcolo di delta_regista
+    SET delta_regista = CASE
+        WHEN NumeroPremiRegista BETWEEN 0 AND 19 THEN 1 * 0.2
+        WHEN NumeroPremiRegista BETWEEN 20 AND 39 THEN 2 * 0.2
+        WHEN NumeroPremiRegista BETWEEN 40 AND 59 THEN 3 * 0.2
+        WHEN NumeroPremiRegista BETWEEN 60 AND 79 THEN 4 * 0.2
+        WHEN NumeroPremiRegista >= 80 THEN 5 * 0.2
+        ELSE 0
+    END;
+    
+    -- Calcolo di delta_attore
+    SET delta_attore = CASE
+        WHEN NumeroPremiAttore BETWEEN 0 AND 9 THEN 1 * 0.3
+        WHEN NumeroPremiAttore BETWEEN 10 AND 19 THEN 2 * 0.3
+        WHEN NumeroPremiAttore BETWEEN 20 AND 29 THEN 3 * 0.3
+        WHEN NumeroPremiAttore BETWEEN 30 AND 39 THEN 4 * 0.3
+        WHEN NumeroPremiAttore >= 40 THEN 5 * 0.3
+        ELSE 0
+    END;
+    
+    -- Calcolo di lambda_premi_film
+    SET lambda_premi_film = CASE
+        WHEN NumeroPremiFilm BETWEEN 0 AND 4 THEN 1 * 0.3
+        WHEN NumeroPremiFilm BETWEEN 5 AND 9 THEN 2 * 0.3
+        WHEN NumeroPremiFilm BETWEEN 10 AND 14 THEN 3 * 0.3
+        WHEN NumeroPremiFilm BETWEEN 15 AND 19 THEN 4 * 0.3
+        WHEN NumeroPremiFilm >= 20 THEN 5 * 0.3
+        ELSE 0
+    END;
+    
+    -- Calcolo di lambda_premi_attori_film
+    SET lambda_premi_attori_film = CASE
+        WHEN NumeroPremiAttoriFilm BETWEEN 0 AND 4 THEN 1 * 0.2
+        WHEN NumeroPremiAttoriFilm BETWEEN 5 AND 9 THEN 2 * 0.2
+        WHEN NumeroPremiAttoriFilm BETWEEN 10 AND 14 THEN 3 * 0.2
+        WHEN NumeroPremiAttoriFilm BETWEEN 15 AND 19 THEN 4 * 0.2
+        WHEN NumeroPremiAttoriFilm >= 20 THEN 5 * 0.2
+        ELSE 0
+    END;
+    
+    -- Calcolo di gamma
+    SET gamma = CASE
+        WHEN NumeroVisualizzazioni BETWEEN 0 AND 99999 THEN 1 * 0.3
+        WHEN NumeroVisualizzazioni BETWEEN 100000 AND 299999 THEN 2 * 0.3
+        WHEN NumeroVisualizzazioni BETWEEN 300000 AND 599999 THEN 3 * 0.3
+        WHEN NumeroVisualizzazioni BETWEEN 600000 AND 999999 THEN 4 * 0.3
+        WHEN NumeroVisualizzazioni >= 1000000 THEN 5 * 0.3
+        ELSE 0
+    END;
+    
+    -- Calcolo del Rating assoluto
+    SET Rating_assoluto = mu_rating_utenti + mu_rating_critici + delta_regista + delta_attore + lambda_premi_film + lambda_premi_attori_film + gamma;
+    
+    -- Aggiorna il Rating assoluto per ciascun film
+    UPDATE Film
+    SET RatingAssoluto = Rating_assoluto;
+END//
+
+DELIMITER ;
+
+-- Funzionalità n°2: Scelta del Server
 
 DELIMITER //
 
@@ -338,38 +457,38 @@ BEGIN
     FROM Paese
     WHERE INET_ATON(IndirizzoIP) BETWEEN INizioIP AND FineIP;
 
-    -- Controlla se ci sono server nel Paese dell'utente
+    -- Controlla se ci sono Server_ nel Paese dell'utente
     SELECT COUNT(*) INTO ServerNelPaese
-    FROM Server
+    FROM Server_
     WHERE RegioneGeografica = PaeseUtente AND OnOff = 1 AND DisponibilitaBanda > 0;
 
-    -- Controlla se ci sono server nella stessa regione geografica dell'utente
+    -- Controlla se ci sono Server nella stessa regione geografica dell'utente
     SELECT COUNT(*) INTO ServerNellaRegione
-    FROM Server
+    FROM Server_
     WHERE RegioneGeografica != PaeseUtente AND OnOff = 1 AND DisponibilitaBanda > 0;
 
-    -- Controlla se ci sono server in altre regioni geografiche con disponibilità
+    -- Controlla se ci sono Server in altre regioni geografiche con disponibilità
     SELECT COUNT(*) INTO ServerAltriPaesi
-    FROM Server
+    FROM Server_
     WHERE RegioneGeografica != PaeseUtente AND OnOff = 1 AND DisponibilitaBanda > 0;
 
-    -- Scegli il server in base alle condizioni
+    -- Scegli il Server in base alle condizioni
     IF ServerNelPaese > 0 THEN
-        -- Ci sono server disponibili nel Paese dell'utente
+        -- Ci sono Server disponibili nel Paese dell'utente
         SELECT IDserver INTO IDServer
-        FROM Server
+        FROM Server_
         WHERE RegioneGeografica = PaeseUtente AND OnOff = 1 AND DisponibilitaBanda > 0
         LIMIT 1;
     ELSEIF ServerNellaRegione > 0 THEN
-        -- Non ci sono server nel Paese, ma ci sono server nella stessa regione geografica
+        -- Non ci sono Server nel Paese, ma ci sono Server_ nella stessa regione geografica
         SELECT IDserver INTO IDServer
-        FROM Server
+        FROM Server_
         WHERE RegioneGeografica != PaeseUtente AND OnOff = 1 AND DisponibilitaBanda > 0
         LIMIT 1;
     ELSE
-        -- Non ci sono server disponibili nella stessa regione geografica, quindi scegli un'altra regione con server disponibili
+        -- Non ci sono Server disponibili nella stessa regione geografica, quindi scegli un'altra regione con Server_ disponibili
         SELECT IDserver INTO IDServer
-        FROM Server
+        FROM Server_
         WHERE RegioneGeografica != PaeseUtente AND OnOff = 1 AND DisponibilitaBanda > 0
         LIMIT 1;
     END IF;
@@ -377,7 +496,7 @@ END//
 
 DELIMITER ;
 
--- Operazione n°10: Caching
+-- Funzionalità n°3: Caching
 
 DELIMITER //
 
@@ -416,7 +535,7 @@ BEGIN
         -- Calcola il fattore di probabilità del genere
         SET genere_prob = (SELECT
             CASE
-                WHEN EXISTS (SELECT * FROM Visualizzazione WHERE IDfilm = film_id AND IDfile NOT IN (SELECT IDfile FROM File WHERE NomeLingua IN (SELECT NomeLingua FROM LinguaUtente ORDER BY DataVisualizzazione DESC LIMIT 5)) AND IDfile NOT IN (SELECT IDfile FROM File WHERE NomeLingua IN (SELECT NomeLingua FROM SottotitoliUtente ORDER BY DataVisualizzazione DESC LIMIT 5))) THEN 0.01
+                WHEN EXISTS (SELECT * FROM Visualizzazione WHERE IDfilm = film_id AND IDfile NOT IN (SELECT IDfile FROM File WHERE NomeLingua IN (SELECT NomeLingua FROM LinguaUtente ORDER BY DataVisualizzazione DESC)) AND IDfile NOT IN (SELECT IDfile FROM File WHERE NomeLingua IN (SELECT NomeLingua FROM SottotitoliUtente ORDER BY DataVisualizzazione DESC))) THEN 0.01
                 ELSE 0.1
             END);
 
@@ -437,7 +556,7 @@ BEGIN
         -- Calcola il fattore di probabilità della durata
         SET durata_prob = (SELECT
             CASE
-                WHEN Durata <= (SELECT AVG(Durata) FROM Film WHERE IDfilm IN (SELECT IDfilm FROM Visualizzazione WHERE IDutente = 1 ORDER BY DataVisualizzazione DESC LIMIT 10)) THEN 0.01
+                WHEN Durata <= (SELECT AVG(Durata) FROM Film WHERE IDfilm IN (SELECT IDfilm FROM Visualizzazione WHERE IDutente = 1 ORDER BY DataVisualizzazione DESC)) THEN 0.01
                 ELSE 0.05
             END FROM Film WHERE IDfilm = film_id);
 
@@ -462,13 +581,13 @@ END//
 
 DELIMITER ;
 
-CALL RegistraUtente('Paolo', 'Rossi', 'paolorossi@email.com', '123456789', 'Base', '7125235678451475', '09/2026', 'Paolo Rossi', '200');
+CALL RegistraUtente('Paolo', 'Rossi', 'paolorossi@gmail.com', '123456789', 'Base', '7125235678451475', "2026-09-31", 'Paolo Rossi', '200');
 
 CALL RinnovoMensileAbbonamento(123456789);
 
-CALL InserisciFileInFilmSphere('TheHunt.avi', 1024, '2023-11-05', 'TheHunt', 'Italiano', 'Inglese', 'mp3', 'avi', 'Europa');
+CALL InserisciFileInFilmSphere('TheRace.avi', 1024, '20231105', 'Italiano', 'Inglese', 'mp3', 'avi', 'Europa');
 
-CALL InserisciValutazioneUtente(123456789, 'TheHunt', 4, '2023-11-05', 'Ottimo film, lo consiglio!');
+CALL InserisciValutazioneUtente(123456789, 'TheRace', 4, '2023/11/05', 'Ottimo film, lo consiglio!');
 
 CALL CalcolaNumeroFatturePaese('2023-10-01', 'Italia', @NumeroFatture);
 SELECT @NumeroFatture;
@@ -476,10 +595,10 @@ SELECT @NumeroFatture;
 CALL StampaStatoServer(123, @Regione, @Storage_, @OnOff, @LarghezzaBanda, @CapacitaMassima, @DisponibilitaBanda);
 SELECT @Regione, @Storage_, @OnOff, @LarghezzaBanda, @CapacitaMassima, @DisponibilitaBanda;
 
-CALL ElencoFilmPerLingua('Italiano', @NumeroFilm);
+CALL NumeroFilmDisponibiliPerAbbonamento('Tipologia1', @NumeroFilm);
 SELECT @NumeroFilm;
 
-CALL CalcolaNumeroVisualizzazioniFilm('TheHunt', @NumeroVisualizzazioni);
+CALL CalcolaNumeroVisualizzazioniFilm('TheRace', @NumeroVisualizzazioni);
 SELECT @NumeroVisualizzazioni AS NumeroVisualizzazioni;
 
 CALL ScegliServer(Titolo, IndirizzoIPUtente, @IDServer);
